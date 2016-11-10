@@ -20,3 +20,4 @@ This is a simple testbench script for trying to make http requests to our ODK Ag
 The documentation below is the guideline for the format of these requests.
 
 - [ODK Authentication API Docs](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI)
+- [Another example of Digest Authentication](https://evertpot.com/223/)

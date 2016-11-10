@@ -3,7 +3,8 @@ var express = require('express');
 var http = require('http');
 var https = require('https');
 var rest = require('rest');
-var beautify = require('js-beautify').js_beautify;
+var md5 = require('md5');
+var beautify = require('js-beautify').html;
 var app = express();
 
 var CURRENT_VERSION = "1.0.0";
@@ -49,31 +50,36 @@ if (SERVER_RUNNING) {
 // var password = new Buffer("t3stt3st").toString('base64');
 //Create authorization for use in headers
 var authString = "";
-authString += 'Token ' + new Buffer('test' + ':' + 't3stt3st').toString('base64');
-console.log("AUTH: " + authString);
+authString += 'Digest ' + new Buffer('test' + ':' + 't3stt3st').toString('base64');
+// console.log("AUTH: " + authString);
 
 var options = {
     host: 'abalobi-fisher.appspot.com',
-    path: '/formList',
-    headers: { 'Authorization': authString},
-    auth: {
-      user: username,
-      pass: password
-    }
-    // auth: 'test' + ':' + 't3stt3st'
+    path: '/formList'
 };
+
+// var simpleOptions = {
+//   host: 'abalobi-fisher.appspot.com',
+//   path: '/formList',
+//   headers: {
+//       Authorization: authString
+//   }
+// }
+// createSimpleRequest(simpleOptions);
 
 console.log(JSON.stringify(options, null, 4));
 
 /*==============================================================================
     HANDLE REQUESTS HERE
 ==============================================================================*/
+//This is used to store the values in www-authenticate, which gets
+//received from the header of the first response.
 var jsonHEADERS;
 
 
 var req = https.get(options, function(res) {
     console.log("=========================================================");
-    console.log('STATUS:\n ' + res.statusCode);
+    console.log('STATUS CODE:\n ' + res.statusCode);
     console.log('HEADERS:\n ' + JSON.stringify(res.headers, null, 4));
     // Buffer the body entirely for processing as a whole.
     var bodyChunks = [];
@@ -82,7 +88,7 @@ var req = https.get(options, function(res) {
         bodyChunks.push(chunk);
     }).on('end', function() {
         var body = Buffer.concat(bodyChunks);
-        // console.log('BODY: \n' + body);
+        console.log('BODY: \n' + beautify(body.toString(), { indent_size: 4 }));
         // ...and/or process the entire body here.
     })
 
@@ -91,37 +97,66 @@ var req = https.get(options, function(res) {
         //Get the headers and make the request again
         var stringFromHeaders;
 
-        var digestRealm;
+        var realm;
         var nonce;
         var qop;
 
-        /*
-          HA1 = MD5(A1) = MD5(username:realm:password)
-          HA2 = MD5(A2) = MD5(method:digestURI)
-          response = MD5(HA1:nonce:HA2)
-        */
+
 
 
         try{
           stringFromHeaders = res.headers['www-authenticate'];
-          jsonHEADERS = splitIntoJSON(stringFromHeaders);
-          console.log("PRINTING www-authenticate");
-          console.log(JSON.stringify(jsonHEADERS, null, 4));
 
-          digestRealm = jsonHEADERS.Digestrealm;
+          //Store the WWW-Authenticate into a JSON
+          jsonHEADERS = splitIntoJSON(stringFromHeaders);
+
+          // console.log("PRINTING www-authenticate");
+          // console.log(JSON.stringify(jsonHEADERS, null, 4));
+
+          realm = jsonHEADERS.Digestrealm;
           nonce = jsonHEADERS.nonce;
           qop = jsonHEADERS.qop;
+          var cnonce = randomString(48);
 
 
+
+          /*
+            HA1 = MD5(A1) = MD5(username:realm:password)
+            HA2 = MD5(A2) = MD5(method:digestURI)
+            response = MD5(HA1:nonce:HA2)
+          */
+
+          //TODO: Generate MD5 hashes here.
+          var beforeHA1 = username + ":" + realm + ":" + password;
+          var beforeHA2 = "GET:" + "/formList";
+
+          var ha1 = md5(beforeHA1);
+          var ha2 = md5(beforeHA2);
+          var actualResponse = md5(ha1 + ":" + nonce + ":" + ha2);
+
+          //THIS is more than likely incorrect.
           digestString = "Digest username=\"" + username +"\","
-          + "Digestrealm=\"abalobi-fisher ODK Aggregate\","
+          + "realm=\"abalobi-fisher ODK Aggregate\","
           + "nonce=\"" + nonce + "\","
-          + "qop=\"" + qop + "\"";
+          + "uri=\"" + "/formList" + "\","
+          + "qop=" + qop + "",
+          + "response=\"" + actualResponse + "\","
+          + "cnonce=\"" + cnonce + "\"";
+
+          //
+          //
+          // + "domain =\"" + "abalobi-fisher.appspot.com" + "\"",
+
+
+
+
           //We have to set up our options now.
           var options2 = {
             host: 'abalobi-fisher.appspot.com',
             path: '/formList',
-            Authorization: digestString
+            headers:{
+              Authorization: "Digest " + digestString
+            }
           }
           // console.log(qop);
           //NOW WE MAKE A SECOND REQUEST
@@ -192,8 +227,8 @@ function removeEscapes(processMe){
 function createRequest(reqOptions){
   var req = https.get(reqOptions, function(res) {
       console.log("=========================================================");
-      console.log('STATUS 2:\n ' + res.statusCode);
-      console.log('HEADERS 2:\n ' + JSON.stringify(res.headers, null, 4));
+      console.log('STATUS:\n ' + res.statusCode);
+      console.log('HEADERS:\n ' + JSON.stringify(res.headers, null, 4));
       // Buffer the body entirely for processing as a whole.
       var bodyChunks = [];
       res.on('data', function(chunk) {
@@ -213,4 +248,38 @@ function createRequest(reqOptions){
   });
 
 
+}
+
+function createSimpleRequest(requestOptions){
+  var req = https.get(requestOptions, function(res) {
+      console.log("=========================================================");
+      console.log("BASIC REQUEST INITIATED");
+      console.log('STATUS:\n ' + res.statusCode);
+      console.log('HEADERS:\n ' + JSON.stringify(res.headers, null, 4));
+      // Buffer the body entirely for processing as a whole.
+      var bodyChunks = [];
+      res.on('data', function(chunk) {
+          // You can process streamed parts here...
+          bodyChunks.push(chunk);
+      }).on('end', function() {
+          var body = Buffer.concat(bodyChunks);
+          console.log('BODY: \n' + beautify(body.toString(), { indent_size: 4 }));
+          // ...and/or process the entire body here.
+      })
+  });
+
+  req.on('error', function(e) {
+      console.log("INTERNAL FUNCTION ERROR");
+      console.log(e);
+      console.log('ERROR: \n' + e.message);
+  });
+}
+
+var randomString = function(length) {
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for(var i = 0; i < length; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
 }
