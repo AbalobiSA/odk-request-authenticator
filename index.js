@@ -3,12 +3,16 @@ var express = require('express');
 var http = require('http');
 var https = require('https');
 var rest = require('rest');
+var beautify = require('js-beautify').js_beautify;
 var app = express();
 
 var CURRENT_VERSION = "1.0.0";
 var SERVER_RUNNING = false;
 var __dirname = "C:/cygwin64/home/Carl/Git/node-testbed"
 var requestNumber = 0;
+
+var username = "test";
+var password = "t3stt3st";
 
 console.log("=========================================================");
 console.log("Carl's node.js testbed");
@@ -41,8 +45,8 @@ if (SERVER_RUNNING) {
 /*==============================================================================
     CREATE REQUESTS HERE
 ==============================================================================*/
-var username = new Buffer("test").toString('base64');
-var password = new Buffer("t3stt3st").toString('base64');
+// var username = new Buffer("test").toString('base64');
+// var password = new Buffer("t3stt3st").toString('base64');
 //Create authorization for use in headers
 var authString = "";
 authString += 'Token ' + new Buffer('test' + ':' + 't3stt3st').toString('base64');
@@ -91,6 +95,13 @@ var req = https.get(options, function(res) {
         var nonce;
         var qop;
 
+        /*
+          HA1 = MD5(A1) = MD5(username:realm:password)
+          HA2 = MD5(A2) = MD5(method:digestURI)
+          response = MD5(HA1:nonce:HA2)
+        */
+
+
         try{
           stringFromHeaders = res.headers['www-authenticate'];
           jsonHEADERS = splitIntoJSON(stringFromHeaders);
@@ -101,7 +112,8 @@ var req = https.get(options, function(res) {
           nonce = jsonHEADERS.nonce;
           qop = jsonHEADERS.qop;
 
-          digestString = "Digest username=\"test\","
+
+          digestString = "Digest username=\"" + username +"\","
           + "Digestrealm=\"abalobi-fisher ODK Aggregate\","
           + "nonce=\"" + nonce + "\","
           + "qop=\"" + qop + "\"";
@@ -189,15 +201,9 @@ function createRequest(reqOptions){
           bodyChunks.push(chunk);
       }).on('end', function() {
           var body = Buffer.concat(bodyChunks);
-          console.log('BODY: \n' + body);
+          console.log('BODY: \n' + beautify(body.toString(), { indent_size: 4 }));
           // ...and/or process the entire body here.
       })
-
-
-
-
-
-
   });
 
   req.on('error', function(e) {
