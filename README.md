@@ -5,13 +5,13 @@ This is a simple testbench script for trying to make http requests to our ODK Ag
 > At present, we are unable to authenticate these requests.
 
 ### Setup
-- Clone the repo 
+- Clone the repo
 - Install npm packages
-
-
-    $ npm install
-
 - Run with node index
 
+Commands:
 
+    $ git clone https://github.com/AbalobiSA/odk-request-authenticator.git
+    $ cd odk-request-authenticator
+    $ npm install
     $ node index
