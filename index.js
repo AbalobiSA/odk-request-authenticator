@@ -139,9 +139,10 @@ var req = https.get(options, function(res) {
           + "realm=\"abalobi-fisher ODK Aggregate\","
           + "nonce=\"" + nonce + "\","
           + "uri=\"" + "/formList" + "\","
-          + "qop=" + qop + "",
           + "response=\"" + actualResponse + "\","
-          + "cnonce=\"" + cnonce + "\"";
+          + "cnonce=\"" + cnonce + "\"",
+          + "qop=" + qop + "";
+          //nc=00000001
 
           //
           //
