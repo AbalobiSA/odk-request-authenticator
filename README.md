@@ -9,9 +9,14 @@ This is a simple testbench script for trying to make http requests to our ODK Ag
 - Install npm packages
 - Run with node index
 
-Commands:
+### Commands:
 
     $ git clone https://github.com/AbalobiSA/odk-request-authenticator.git
     $ cd odk-request-authenticator
     $ npm install
     $ node index
+
+### Links
+The documentation below is the guideline for the format of these requests.
+
+- [ODK Authentication API Docs](https://bitbucket.org/javarosa/javarosa/wiki/AuthenticationAPI)
