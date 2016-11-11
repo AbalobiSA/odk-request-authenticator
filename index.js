@@ -136,14 +136,22 @@ if (MODE_DIGEST) {
                 nonce = jsonHEADERS.nonce + "==";
                 qop = jsonHEADERS.qop;
                 var cnonce = randomString(48);
+                var nc = "";
 
-
-
+                console.log("Some information on the Hashing Process:\n");
+                console.log("Realm: " + realm 
+                    + "\nNonce: " + nonce 
+                    + "\nUsername: " + username 
+                    + "\nPassword: " + password 
+                    + "\nCNonce: " + cnonce 
+                    + "\nQop: " + qop + "\n");
                 /*
                   HA1 = MD5(A1) = MD5(username:realm:password)
                   HA2 = MD5(A2) = MD5(method:digestURI)
                   response = MD5(HA1:nonce:HA2)
                 */
+
+
 
                 //TODO: Generate MD5 hashes here.
                 var beforeHA1 = username + ":" + realm + ":" + password;
@@ -151,7 +159,14 @@ if (MODE_DIGEST) {
 
                 var ha1 = md5(beforeHA1);
                 var ha2 = md5(beforeHA2);
-                var actualResponse = md5(ha1 + ":" + nonce + ":" + ha2);
+                var actualResponse = md5(ha1 + ":" + nonce + ":" + nc + ":" + cnonce + ":" + qop + ":" + ha2);
+
+                console.log("Before 1st Hash: " + beforeHA1 + "\n" +
+                    "Before 2nd Hash: " + beforeHA2 + "\n" +
+                    "HA1: " + ha1 + "\n" +
+                    "HA2: " + ha2 + "\n" +
+                    "Fake Response: " + "026bf6a54e4fc47e99e64df8f96fd2a3" + "\n" +
+                    "Response: " + actualResponse + "\n");
 
                 //THIS is more than likely incorrect.
                 digestString = "Digest username=\"" + username + "\", " +
@@ -164,10 +179,8 @@ if (MODE_DIGEST) {
                     "response=\"" + actualResponse + "\", " +
                     "opaque=, ";
 
-                    console.log("TEST STRING \n" + digestString);
+                    // console.log("TEST STRING \n" + digestString);
                     
-                    
-
                 /*
                 Digest username="test",
                 realm="abalobi-fisher ODK Aggregate",
@@ -192,7 +205,8 @@ if (MODE_DIGEST) {
                     }
 
                 console.log("Your options for this request: \n" + JSON.stringify(options2, null, 4));
-                console.log("A nicer view of your digest string: \n");
+                console.log("\n\nA nicer view of your digest string: \n");
+                console.log(nicerDigest(digestString));
                 // console.log(JSON.stringify(splitIntoJSON(digestString), null, 4));
                     // console.log(qop);
                     //NOW WE MAKE A SECOND REQUEST
@@ -326,4 +340,13 @@ var randomString = function(length) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
     return text;
+}
+
+var nicerDigest = function(sentDigestString){
+    var digestArray = sentDigestString.split(",");
+    var escapedString = "";
+    for (var i = 0; i < digestArray.length; i++){
+        escapedString += digestArray[i] + "\n";
+    }
+    return escapedString;
 }
