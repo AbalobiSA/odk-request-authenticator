@@ -154,13 +154,31 @@ if (MODE_DIGEST) {
                 var actualResponse = md5(ha1 + ":" + nonce + ":" + ha2);
 
                 //THIS is more than likely incorrect.
-                digestString = "Digest username=\"" + username + "\"," +
-                    "realm=\"abalobi-fisher ODK Aggregate\"," +
-                    "nonce=\"" + nonce + "\"," +
-                    "uri=\"" + "/formList" + "\"," +
-                    "response=\"" + actualResponse + "\"," +
-                    "cnonce=\"" + cnonce + "\"," +
-                    "qop=" + qop + "";
+                digestString = "Digest username=\"" + username + "\", " +
+                    "realm=\"abalobi-fisher ODK Aggregate\", " +
+                    "nonce=\"" + nonce + "\", " +
+                    "uri=\"" + "/formList" + "\", " +
+                    "qop=" + qop + ", " + 
+                    "nc=" + ", " + 
+                    "cnonce=\"" + cnonce + "\", " +
+                    "response=\"" + actualResponse + "\", " +
+                    "opaque=, ";
+
+                    console.log("TEST STRING \n" + digestString);
+                    
+                    
+
+                /*
+                Digest username="test",
+                realm="abalobi-fisher ODK Aggregate",
+                nonce="MTQ3ODg1NDU0NzA0MToxMzcwOTMyOTU5MTIyNGUwMDU1MzVmMzY4NDA1ODZlYg==",
+                uri="/formList",
+                qop=auth,
+                nc=,
+                cnonce="KQWRmKFaoP6xKaR5J0DQXh9Gs5dJ1dsC58h93BpymyxiukcQ",
+                response="2ba0dcb883bd393ad8533e5006ae3f82",
+                opaque=""
+                */
 
                 // console.log(digestString);
 
@@ -175,7 +193,7 @@ if (MODE_DIGEST) {
 
                 console.log("Your options for this request: \n" + JSON.stringify(options2, null, 4));
                 console.log("A nicer view of your digest string: \n");
-                console.log(JSON.stringify(splitIntoJSON(digestString), null, 4));
+                // console.log(JSON.stringify(splitIntoJSON(digestString), null, 4));
                     // console.log(qop);
                     //NOW WE MAKE A SECOND REQUEST
                 createRequest(options2);
