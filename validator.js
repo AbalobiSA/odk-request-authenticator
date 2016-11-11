@@ -2,7 +2,6 @@
     Carl's ODK Authenticator App
     Version: 1.0.0
 ==============================================================================*/
-
 var http = require('http');
 var https = require('https');
 var md5 = require('md5');
@@ -17,8 +16,10 @@ var SERVER_RUNNING = false;
 var MODE_SIMPLE = false; //If you want to run a basic request (not working) then set as true
 var MODE_DIGEST = true; //This will attempt Digest Authentication
 
-var username = "test";
-var password = "t3stt3st";
+
+var user = "test";
+var pass = "t3stt3st";
+var GLOBAL_STATUS_CODE = 0;
 
 /*==============================================================================
     Hard-coded variables
@@ -38,6 +39,15 @@ var options = {
     path: '/formList'
 };
 
+validateCredentials(user, pass, function(){
+    if (GLOBAL_STATUS_CODE == 200){
+        console.log("SUCCESS!");
+    } else {
+        console.log("FAILURE!");
+    }
+});
+
+
 /*==============================================================================
     HANDLE REQUESTS HERE
 ==============================================================================*/
@@ -45,9 +55,10 @@ var options = {
 //received from the header of the first response.
 var jsonHEADERS;
 
-if (MODE_DIGEST) {
+function validateCredentials(username, password, callback) {
     console.log("Creating initial Digest Request...");
     var req = https.get(options, function(res) {
+        jsonHEADERS = {};
         console.log("");
         console.log('STATUS CODE:\n ' + res.statusCode);
         console.log('HEADERS:\n ' + JSON.stringify(res.headers, null, 4));
@@ -80,11 +91,6 @@ if (MODE_DIGEST) {
                 //Store the WWW-Authenticate into a JSON
                 jsonHEADERS = splitIntoJSON(stringFromHeaders);
 
-                // console.log(JSON.stringify(jsonHEADERS, null, 4));
-
-                // console.log("PRINTING www-authenticate");
-                // console.log(JSON.stringify(jsonHEADERS, null, 4));
-
                 realm = jsonHEADERS.realm;
                 nonce = jsonHEADERS.nonce + "==";
                 qop = jsonHEADERS.qop;
@@ -92,12 +98,13 @@ if (MODE_DIGEST) {
                 var nc = "";
 
                 console.log("Some information on the Hashing Process:\n");
-                console.log("Realm: " + realm 
-                    + "\nNonce: " + nonce 
-                    + "\nUsername: " + username 
-                    + "\nPassword: " + password 
-                    + "\nCNonce: " + cnonce 
-                    + "\nQop: " + qop + "\n");
+                console.log("Realm: " + realm +
+                    "\nNonce: " + nonce +
+                    "\nUsername: " + username +
+                    "\nPassword: " + password +
+                    "\nCNonce: " + cnonce +
+                    "\nQop: " + qop + "\n");
+
                 /*
                   HA1 = MD5(A1) = MD5(username:realm:password)
                   HA2 = MD5(A2) = MD5(method:digestURI)
@@ -118,52 +125,35 @@ if (MODE_DIGEST) {
                     "Before 2nd Hash: " + beforeHA2 + "\n" +
                     "HA1: " + ha1 + "\n" +
                     "HA2: " + ha2 + "\n" +
-                    "Fake Response: " + "026bf6a54e4fc47e99e64df8f96fd2a3" + "\n" +
                     "Response: " + actualResponse + "\n");
 
-                //THIS is more than likely incorrect.
                 digestString = "Digest username=\"" + username + "\", " +
                     "realm=\"abalobi-fisher ODK Aggregate\", " +
                     "nonce=\"" + nonce + "\", " +
                     "uri=\"" + "/formList" + "\", " +
-                    "qop=" + qop + ", " + 
-                    "nc=" + ", " + 
+                    "qop=" + qop + ", " +
+                    "nc=" + ", " +
                     "cnonce=\"" + cnonce + "\", " +
                     "response=\"" + actualResponse + "\", " +
                     "opaque=, ";
 
-                    // console.log("TEST STRING \n" + digestString);
-                    
-                /*
-                Digest username="test",
-                realm="abalobi-fisher ODK Aggregate",
-                nonce="MTQ3ODg1NDU0NzA0MToxMzcwOTMyOTU5MTIyNGUwMDU1MzVmMzY4NDA1ODZlYg==",
-                uri="/formList",
-                qop=auth,
-                nc=,
-                cnonce="KQWRmKFaoP6xKaR5J0DQXh9Gs5dJ1dsC58h93BpymyxiukcQ",
-                response="2ba0dcb883bd393ad8533e5006ae3f82",
-                opaque=""
-                */
-
-                // console.log(digestString);
-
                 //We have to set up our options now.
                 var options2 = {
-                        host: 'abalobi-fisher.appspot.com',
-                        path: '/formList',
-                        headers: {
-                            Authorization: digestString
-                        }
+                    host: 'abalobi-fisher.appspot.com',
+                    path: '/formList',
+                    headers: {
+                        Authorization: digestString
                     }
+                }
 
                 console.log("Your options for this request: \n" + JSON.stringify(options2, null, 4));
                 console.log("\n\nA nicer view of your digest string: \n");
                 console.log(nicerDigest(digestString));
-                // console.log(JSON.stringify(splitIntoJSON(digestString), null, 4));
-                    // console.log(qop);
-                    //NOW WE MAKE A SECOND REQUEST
-                createRequest(options2);
+
+                //NOW WE MAKE A SECOND REQUEST
+                createRequest(options2, callback);
+
+                // callback();
 
             } catch (ex) {
                 console.log("ERROR: \n" + ex);
@@ -172,20 +162,14 @@ if (MODE_DIGEST) {
 
         })
 
-
-
-
     });
 
     req.on('error', function(e) {
         console.log('ERROR: \n' + e.message);
     });
 
-
-} //End of MODE_DIGEST if statement
-
-
-
+    
+}
 
 /*==============================================================================
     Utility Methods
@@ -208,34 +192,28 @@ function splitIntoJSON(stringToSplit) {
             equalsSplit[0] = equalsSplit[0].replace(/Digest/g, '');
         }
 
-
         //Remove spaces from variable names
         var spacesRemoved = removeSpaces(equalsSplit[0].toString());
         finalObject[spacesRemoved.toString()] = removeEscapes(equalsSplit[1]);
     }
 
     return finalObject;
-
-    // console.log("PRINTING JSON TO CONSOLE");
-    // console.log(JSON.stringify(finalObject, null, 4));
-
 }
 
 function removeSpaces(processMe) {
     return processMe.replace(/\s+/g, '');
-    // return processMe.replace( /\s/g, "");
 }
 
 function removeEscapes(processMe) {
     return processMe.replace(/\"/g, '');
-    // return processMe.replace( /\s/g, "");
 }
 
-function createRequest(reqOptions) {
+function createRequest(reqOptions, callbackFunction) {
     var req = https.get(reqOptions, function(res) {
         console.log("=========================================================");
+        GLOBAL_STATUS_CODE = res.statusCode;
         console.log('STATUS:\n ' + res.statusCode);
-        console.log('HEADERS:\n ' + JSON.stringify(res.headers, null, 4));
+        // console.log('HEADERS:\n ' + JSON.stringify(res.headers, null, 4));
         // Buffer the body entirely for processing as a whole.
         var bodyChunks = [];
         res.on('data', function(chunk) {
@@ -247,6 +225,7 @@ function createRequest(reqOptions) {
                 indent_size: 4
             }));
             // ...and/or process the entire body here.
+            callbackFunction();
         })
     });
 
@@ -268,10 +247,10 @@ var randomString = function(length) {
     return text;
 }
 
-var nicerDigest = function(sentDigestString){
+var nicerDigest = function(sentDigestString) {
     var digestArray = sentDigestString.split(",");
     var escapedString = "";
-    for (var i = 0; i < digestArray.length; i++){
+    for (var i = 0; i < digestArray.length; i++) {
         escapedString += digestArray[i] + "\n";
     }
     return escapedString;
